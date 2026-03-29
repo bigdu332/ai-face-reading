@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>AI面相·读脸识运</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --purple:#2D1B69;--gold:#D4AF37;--red:#8B2252;
+  --bg:#0F0B1A;--card:#1A1230;
+  --text:#F5F0E8;--text2:#A89EC2;--text3:#6B5F8A;
+  --green:#4CAF50;--orange:#FF9800;
+  font-size:calc(100vw/375*16);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
+.page{position:fixed;top:0;left:0;width:100%;height:100%;overflow-y:auto;transition:transform .4s ease,opacity .4s ease;will-change:transform,opacity}
+.page.hidden{transform:translateX(100%);opacity:0;pointer-events:none}
+.page.slide-left{transform:translateX(-30%);opacity:0;pointer-events:none}
+
+/* 祥云装饰 */
+.cloud{position:absolute;opacity:.06;font-size:3rem;color:var(--gold)}
+.cloud-1{top:10%;left:5%;animation:float 6s ease-in-out infinite}
+.cloud-2{top:25%;right:8%;animation:float 8s ease-in-out infinite 1s}
+.cloud-3{bottom:20%;left:10%;animation:float 7s ease-in-out infinite 2s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+
+/* 首页 */
+#home{background:linear-gradient(180deg,var(--bg) 0%,var(--purple) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.home-title{font-size:2rem;font-weight:700;background:linear-gradient(135deg,var(--gold),#fff5cc,var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-align:center;margin-bottom:.5rem}
+.home-sub{color:var(--text2);font-size:.875rem;margin-bottom:3rem}
+.scan-btn{width:8rem;height:8rem;border-radius:50%;border:3px solid var(--gold);background:rgba(212,175,55,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .2s}
+.scan-btn:active{transform:scale(.95)}
+.scan-btn::before{content:'';position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid var(--gold);animation:pulse 2s ease-out infinite;opacity:0}
+@keyframes pulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.5);opacity:0}}
+.scan-icon{font-size:2.5rem}
+.scan-label{color:var(--gold);font-size:.875rem;margin-top:1.5rem;font-weight:500}
+.disclaimer{position:absolute;bottom:2rem;color:var(--text3);font-size:.75rem;text-align:center;padding:0 2rem}
+
+/* 加载页 */
+#loading{background:linear-gradient(180deg,var(--bg) 0%,var(--purple) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.face-scan{width:10rem;height:10rem;border-radius:50%;background:var(--card);position:relative;overflow:hidden;border:2px solid var(--gold);margin-bottom:2rem}
+.face-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;opacity:.5}
+.scan-line{position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:scanDown 1.5s ease-in-out infinite}
+@keyframes scanDown{0%{top:0;opacity:1}50%{opacity:1}100%{top:100%;opacity:.3}}
+.loading-steps{text-align:center}
+.loading-step{color:var(--text2);font-size:.9rem;margin:.5rem 0;opacity:0;transform:translateY(10px);transition:all .5s ease}
+.loading-step.active{opacity:1;transform:translateY(0);color:var(--gold)}
+.loading-step.done{opacity:.5;transform:translateY(0)}
+
+/* 结果页 */
+#result{background:linear-gradient(180deg,var(--bg) 0%,var(--purple) 80%,var(--bg) 100%);padding:2rem 1.5rem 6rem}
+.result-header{text-align:center;margin-bottom:1.5rem}
+.result-avatar{width:5rem;height:5rem;border-radius:50%;background:var(--card);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin:0 auto 1rem}
+.score-wrap{position:relative;display:inline-block}
+.score-num{font-size:4rem;font-weight:700;background:linear-gradient(135deg,var(--gold),#fff5cc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.score-unit{font-size:1rem;color:var(--gold);vertical-align:super}
+.score-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6rem;height:6rem;border-radius:50%;background:radial-gradient(var(--gold),transparent);opacity:0;animation:glowPulse .6s ease-out forwards;animation-delay:1.5s}
+@keyframes glowPulse{0%{opacity:.4;transform:translate(-50%,-50%) scale(0)}60%{opacity:.2}100%{opacity:0;transform:translate(-50%,-50%) scale(2)}}
+.tag{display:inline-block;background:linear-gradient(135deg,var(--red),var(--purple));padding:.3rem 1rem;border-radius:1rem;font-size:.85rem;margin-top:.5rem;border:1px solid var(--gold);color:var(--gold)}
+.radar-wrap{margin:1.5rem auto;display:flex;justify-content:center}
+canvas#radarChart{max-width:100%}
+.dim-list{margin:1.5rem 0}
+.dim-item{background:var(--card);border-radius:1rem;padding:1rem;margin-bottom:.75rem;border:1px solid #2A2045}
+.dim-icon{font-size:1.2rem;margin-right:.5rem}
+.dim-name{font-weight:600;font-size:.9rem}
+.dim-score{float:right;color:var(--gold);font-weight:700}
+.dim-desc{color:var(--text2);font-size:.8rem;margin-top:.4rem;line-height:1.5}
+.btn-group{display:flex;gap:.75rem;margin:1.5rem 0}
+.btn{flex:1;padding:.9rem;border-radius:.75rem;border:none;font-size:.9rem;font-weight:600;cursor:pointer;transition:transform .2s}
+.btn:active{transform:scale(.96)}
+.btn-primary{background:linear-gradient(135deg,var(--gold),#c4982a);color:#1a1230}
+.btn-secondary{background:var(--card);color:var(--gold);border:1px solid var(--gold)}
+.pair-entry{text-align:center;padding:1rem;background:var(--card);border-radius:1rem;border:1px solid #2A2045;cursor:pointer}
+.pair-entry span{color:var(--gold);font-size:.9rem}
+
+/* 详细报告页 */
+#detail{background:linear-gradient(180deg,var(--bg) 0%,var(--purple) 50%,var(--bg) 100%);padding:2rem 1.5rem 4rem}
+.detail-header{display:flex;align-items:center;margin-bottom:1.5rem;cursor:pointer}
+.back-btn{font-size:1.2rem;margin-right:.75rem;color:var(--gold)}
+.detail-title{font-size:1.2rem;font-weight:700}
+.detail-section{background:var(--card);border-radius:1rem;padding:1.25rem;margin-bottom:1rem;border:1px solid #2A2045}
+.detail-section h3{font-size:1rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.detail-section h3 .dim-score{font-size:.85rem}
+.detail-body{color:var(--text2);font-size:.85rem;line-height:1.8}
+.tip-box{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:.5rem;padding:.75rem;margin-top:.75rem;font-size:.8rem;color:var(--gold)}
+.tip-box::before{content:'💡 ';font-size:.9rem}
+
+/* 分享页 */
+#share{background:var(--bg);padding:2rem 1.5rem;display:flex;flex-direction:column;align-items:center}
+.share-header{display:flex;align-items:center;margin-bottom:1.5rem;width:100%;cursor:pointer}
+.share-card{width:100%;max-width:22rem;background:linear-gradient(180deg,var(--purple),#1a0e3a);border-radius:1.5rem;padding:2rem 1.5rem;border:1px solid var(--gold);text-align:center;position:relative;overflow:hidden}
+.share-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),var(--red),var(--gold))}
+.share-card .cloud{font-size:2rem;opacity:.1}
+.share-card-title{font-size:1.1rem;color:var(--gold);margin-bottom:1rem;font-weight:700}
+.share-score{font-size:3rem;font-weight:700;background:linear-gradient(135deg,var(--gold),#fff5cc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.share-tag{display:inline-block;background:rgba(212,175,55,.15);border:1px solid var(--gold);padding:.2rem .75rem;border-radius:.75rem;color:var(--gold);font-size:.8rem;margin:.75rem 0}
+.share-dims{display:flex;justify-content:space-around;margin:1rem 0;flex-wrap:wrap;gap:.5rem}
+.share-dim{text-align:center}
+.share-dim-name{font-size:.7rem;color:var(--text3)}
+.share-dim-val{font-size:1rem;color:var(--gold);font-weight:600}
+.share-qr{width:4rem;height:4rem;background:var(--card);border-radius:.5rem;margin:1rem auto 0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--text3);border:1px solid #2A2045}
+.share-footer{color:var(--text3);font-size:.7rem;margin-top:.75rem}
+.share-actions{margin-top:1.5rem;width:100%;display:flex;gap:.75rem}
+</style>
+</head>
+<body>
+
+<!-- 首页 -->
+<div class="page" id="home">
+  <div class="cloud cloud-1">☁</div>
+  <div class="cloud cloud-2">☁</div>
+  <div class="cloud cloud-3">☁</div>
+  <h1 class="home-title">AI 面相 · 读脸识运</h1>
+  <p class="home-sub">传统面相 × 人工智能</p>
+  <div class="scan-btn" onclick="startScan()">
+    <span class="scan-icon">📷</span>
+  </div>
+  <p class="scan-label">拍一张，看面相</p>
+  <p class="disclaimer">趣味面部特征分析，仅供娱乐参考</p>
+</div>
+
+<!-- 加载页 -->
+<div class="page hidden" id="loading">
+  <div class="face-scan">
+    <div class="face-placeholder">🧑</div>
+    <div class="scan-line"></div>
+  </div>
+  <div class="loading-steps">
+    <div class="loading-step" id="step1">正在检测面部轮廓...</div>
+    <div class="loading-step" id="step2">分析五官特征...</div>
+    <div class="loading-step" id="step3">生成运势报告...</div>
+  </div>
+</div>
+
+<!-- 结果页 -->
+<div class="page hidden" id="result">
+  <div class="result-header">
+    <div class="result-avatar">🧑</div>
+    <div class="score-wrap">
+      <span class="score-num" id="scoreNum">0</span>
+      <span class="score-unit">分</span>
+      <div class="score-glow"></div>
+    </div>
+    <div><span class="tag">🌸 桃花满面</span></div>
+  </div>
+  <div class="radar-wrap"><canvas id="radarChart" width="280" height="280"></canvas></div>
+  <div class="dim-list">
+    <div class="dim-item"><span class="dim-icon">💼</span><span class="dim-name">事业运</span><span class="dim-score">85</span><div class="dim-desc">额头饱满开阔，天庭气象俱佳，思维格局开阔，25-35岁是黄金上升期。</div></div>
+    <div class="dim-item"><span class="dim-icon">💰</span><span class="dim-name">财运</span><span class="dim-score">78</span><div class="dim-desc">鼻梁挺拔丰隆，财运根基扎实，耳垂圆润，中年后财源渐广。</div></div>
+    <div class="dim-item"><span class="dim-icon">🌸</span><span class="dim-name">桃花运</span><span class="dim-score">92</span><div class="dim-desc">目光有神，唇形端正饱满，面部对称度高，天然吸引力拉满。</div></div>
+    <div class="dim-item"><span class="dim-icon">🍀</span><span class="dim-name">贵人运</span><span class="dim-score">80</span><div class="dim-desc">眉清目秀，性情温和有条理，走到哪都有人帮，天生好人缘。</div></div>
+    <div class="dim-item"><span class="dim-icon">💪</span><span class="dim-name">健康运</span><span class="dim-score">88</span><div class="dim-desc">人中深长清晰，生命力旺盛，气色红润有光泽，精气神俱佳。</div></div>
+  </div>
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="showDetail()">查看详细解读 ¥9.9</button>
+    <button class="btn btn-secondary" onclick="showShare()">分享给好友</button>
+  </div>
+  <div class="pair-entry" onclick="alert('双人配对功能开发中，敬请期待！')"><span>💕 双人面相配对 →</span></div>
+</div>
+
+<!-- 详细报告页 -->
+<div class="page hidden" id="detail">
+  <div class="detail-header" onclick="backToResult()"><span class="back-btn">←</span><span class="detail-title">详细面相报告</span></div>
+  <div class="detail-section">
+    <h3>💼 事业运 <span class="dim-score">85分</span></h3>
+    <div class="detail-body">你的额头饱满开阔，天庭气象俱佳，属于少年得志型。眉毛清秀有序，说明你做事有条理、思路清晰，适合需要规划和决策的工作。颧骨端正有肉，管理能力出众，带团队掌实权是你的强项。法令纹清晰对称，随着年龄增长，威望会日益提升。三庭比例均匀，说明你人生各阶段运势平稳上扬，事业发展有持续性。</div>
+    <div class="tip-box">建议在25-40岁积极拓展事业版图，这是你的黄金发力期。多参与需要领导力的项目，你的面相天生适合带队。</div>
+  </div>
+  <div class="detail-section">
+    <h3>💰 财运 <span class="dim-score">78分</span></h3>
+    <div class="detail-body">鼻梁挺拔丰隆，财运根基扎实，属于中年后财源广进的类型。鼻头圆润有肉，聚财能力不错。耳垂厚实下垂，这是传统面相中公认的福气象征，一生少为钱发愁。下巴圆润饱满，预示晚年物质生活充裕。不过鼻翼宽度适中偏窄，说明在理财上需要更主动一些，不能完全靠"天赋"。</div>
+    <div class="tip-box">建议培养主动理财的习惯，定投和稳健型投资最适合你。你的财运属于「越理越顺」型，不理则散。</div>
+  </div>
+  <div class="detail-section">
+    <h3>🌸 桃花运 <span class="dim-score">92分</span></h3>
+    <div class="detail-body">你的眼型属于有神的桃花眼，自带吸引力光环。唇形饱满端正，感情表达能力强，容易让对方感受到你的真诚。面部对称度很高，第一印象极佳，在社交场合自然成为焦点。五眼比例协调，脸型柔和，整体气质温润有亲和力。综合来看，你是天生的桃花体质，异性缘极强，需要的不是"脱单"，而是"选择"。</div>
+    <div class="tip-box">桃花旺不代表感情顺，关键在于识人。建议多观察对方的眼神和嘴角——面相学中，这两处最能反映一个人的真实性格。</div>
+  </div>
+  <div class="detail-section">
+    <h3>🍀 贵人运 <span class="dim-score">80分</span></h3>
+    <div class="detail-body">眉清目秀，性情温和有条理，这让你在人际交往中天然讨喜。耳朵位置端正、形态良好，说明你从小就容易得到长辈提携。眼神温和有光，让人本能地愿意信任你、帮助你。颧骨位置恰当，不高不低，既有主见又不咄咄逼人，是最容易获得合作机会的面相特征。</div>
+    <div class="tip-box">你的贵人运已经很好了，关键是「接得住」。当机会来的时候不要犹豫，你面相中的果断力完全够用。</div>
+  </div>
+  <div class="detail-section">
+    <h3>💪 健康运 <span class="dim-score">88分</span></h3>
+    <div class="detail-body">人中深长清晰，传统面相学认为这是生命力旺盛的标志。耳朵厚实有肉，肾气充足，先天体质底子好。面部对称度高，说明身心状态和谐。肤色红润有光泽，近期精气神俱佳，是运势上行的信号。法令纹位置正常，没有过早出现的操劳痕迹。</div>
+    <div class="tip-box">先天条件好更要珍惜，规律作息+适度运动是保持这份健康运的关键。你的体质适合有氧运动，跑步或游泳最佳。</div>
+  </div>
+</div>
+
+<!-- 分享页 -->
+<div class="page hidden" id="share">
+  <div class="share-header" onclick="backToResult()"><span class="back-btn">←</span><span class="detail-title">分享卡片</span></div>
+  <div class="share-card">
+    <div class="cloud" style="position:absolute;top:8%;right:10%;opacity:.08">☁</div>
+    <div class="cloud" style="position:absolute;bottom:15%;left:5%;opacity:.06">☁</div>
+    <div class="share-card-title">AI 面相 · 读脸识运</div>
+    <div class="share-score">88<span style="font-size:1rem">分</span></div>
+    <div class="share-tag">🌸 桃花满面</div>
+    <div class="share-dims">
+      <div class="share-dim"><div class="share-dim-val">85</div><div class="share-dim-name">事业</div></div>
+      <div class="share-dim"><div class="share-dim-val">78</div><div class="share-dim-name">财运</div></div>
+      <div class="share-dim"><div class="share-dim-val">92</div><div class="share-dim-name">桃花</div></div>
+      <div class="share-dim"><div class="share-dim-val">80</div><div class="share-dim-name">贵人</div></div>
+      <div class="share-dim"><div class="share-dim-val">88</div><div class="share-dim-name">健康</div></div>
+    </div>
+    <div class="share-qr">二维码</div>
+    <div class="share-footer">趣味面部特征分析 · 仅供娱乐参考</div>
+  </div>
+  <div class="share-actions">
+    <button class="btn btn-primary" onclick="alert('已保存到相册（demo模拟）')">保存图片</button>
+    <button class="btn btn-secondary" onclick="alert('分享功能开发中')">分享到微信</button>
+  </div>
+</div>
+
+<script>
+// 页面切换
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>{
+    if(p.id===id){p.classList.remove('hidden','slide-left')}
+    else{p.classList.add('hidden')}
+  })
+}
+
+// 首页→加载
+function startScan(){
+  showPage('loading');
+  const steps=['step1','step2','step3'];
+  steps.forEach((s,i)=>{
+    setTimeout(()=>{
+      document.getElementById(s).classList.add('active');
+      if(i>0)document.getElementById(steps[i-1]).classList.remove('active');
+      document.getElementById(steps[i-1]||steps[0]).classList.add('done');
+    },(i+1)*900);
+  });
+  setTimeout(()=>{showPage('result');animateScore();drawRadar()},3200);
+}
+
+// 分数动画
+function animateScore(){
+  const el=document.getElementById('scoreNum');
+  let cur=0;const target=88;
+  const step=()=>{
+    cur+=Math.ceil((target-cur)/8);
+    if(cur>=target)cur=target;
+    el.textContent=cur;
+    if(cur<target)requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+// 雷达图
+function drawRadar(){
+  const c=document.getElementById('radarChart');
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height,cx=W/2,cy=H/2,R=100;
+  const labels=['事业','财运','桃花','贵人','健康'];
+  const values=[85,78,92,80,88];
+  const n=5;
+  ctx.clearRect(0,0,W,H);
+
+  // 网格
+  for(let r=1;r<=4;r++){
+    ctx.beginPath();
+    for(let i=0;i<=n;i++){
+      const a=Math.PI*2/n*i-Math.PI/2;
+      const rr=R*r/4;
+      const x=cx+rr*Math.cos(a),y=cy+rr*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(212,175,55,0.15)';ctx.stroke();
+  }
+  // 轴线
+  for(let i=0;i<n;i++){
+    const a=Math.PI*2/n*i-Math.PI/2;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
+    ctx.strokeStyle='rgba(212,175,55,0.2)';ctx.stroke();
+  }
+  // 标签
+  ctx.fillStyle='#A89EC2';ctx.font='12px sans-serif';ctx.textAlign='center';
+  for(let i=0;i<n;i++){
+    const a=Math.PI*2/n*i-Math.PI/2;
+    const x=cx+(R+18)*Math.cos(a),y=cy+(R+18)*Math.sin(a);
+    ctx.fillText(labels[i]+' '+values[i],x,y+4);
+  }
+  // 数据区域（动画）
+  let progress=0;
+  const draw=()=>{
+    progress=Math.min(progress+0.03,1);
+    ctx.clearRect(cx-R-30,cy-R-30,2*(R+30),2*(R+30));
+    // 重绘网格
+    for(let r=1;r<=4;r++){
+      ctx.beginPath();
+      for(let i=0;i<=n;i++){
+        const a=Math.PI*2/n*i-Math.PI/2;const rr=R*r/4;
+        const x=cx+rr*Math.cos(a),y=cy+rr*Math.sin(a);
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle='rgba(212,175,55,0.15)';ctx.stroke();
+    }
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2/n*i-Math.PI/2;
+      ctx.beginPath();ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));
+      ctx.strokeStyle='rgba(212,175,55,0.2)';ctx.stroke();
+    }
+    ctx.fillStyle='#A89EC2';ctx.font='12px sans-serif';ctx.textAlign='center';
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2/n*i-Math.PI/2;
+      const x=cx+(R+18)*Math.cos(a),y=cy+(R+18)*Math.sin(a);
+      ctx.fillText(labels[i]+' '+values[i],x,y+4);
+    }
+    // 数据
+    ctx.beginPath();
+    for(let i=0;i<=n;i++){
+      const idx=i%n;const a=Math.PI*2/n*idx-Math.PI/2;
+      const rr=R*values[idx]/100*progress;
+      const x=cx+rr*Math.cos(a),y=cy+rr*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.fillStyle='rgba(212,175,55,0.2)';ctx.fill();
+    ctx.strokeStyle='#D4AF37';ctx.lineWidth=2;ctx.stroke();
+    // 顶点
+    for(let i=0;i<n;i++){
+      const a=Math.PI*2/n*i-Math.PI/2;
+      const rr=R*values[i]/100*progress;
+      ctx.beginPath();
+      ctx.arc(cx+rr*Math.cos(a),cy+rr*Math.sin(a),3,0,Math.PI*2);
+      ctx.fillStyle='#D4AF37';ctx.fill();
+    }
+    if(progress<1)requestAnimationFrame(draw);
+  };
+  requestAnimationFrame(draw);
+}
+
+function showDetail(){showPage('detail')}
+function showShare(){showPage('share')}
+function backToResult(){showPage('result')}
+</script>
+</body>
+</html>
